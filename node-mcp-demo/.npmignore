@@ -1,0 +1,11 @@
+src/
+tsconfig.json
+*.log
+.env
+.env.*
+node_modules/
+.DS_Store
+config/
+*.md
+!README.md
+

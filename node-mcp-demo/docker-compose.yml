@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  claude-stats-mcp:
+    build: .
+    container_name: claude-stats-mcp
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../ccReport/config:/app/config:ro
+    environment:
+      - NODE_ENV=production
+      - MCP_TRANSPORT=httpStream
+      - MCP_PORT=8000
+      - KEYS_CONFIG_PATH=/app/config/keys.json
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
+
