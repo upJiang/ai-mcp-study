@@ -1,6 +1,6 @@
 {
   "name": "claude-stats-mcp",
-  "version": "1.0.0",
+  "version": "2.2.2",
   "description": "MCP服务器用于查询Claude Code使用统计数据",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.6.0",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "fastmcp": "^3.25.3",
