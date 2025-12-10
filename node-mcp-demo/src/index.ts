@@ -19,6 +19,17 @@ import {
 // 加载环境变量
 dotenv.config();
 
+// 解析命令行参数
+const args = process.argv.slice(2);
+let configPath: string | undefined;
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--config' || args[i] === '-c') {
+    configPath = args[i + 1];
+    break;
+  }
+}
+
 // 创建FastMCP服务器实例
 const server = new FastMCP({
   name: 'Claude Stats MCP',
@@ -37,7 +48,7 @@ async function getDailyStats(forceRefresh = false) {
   if (!forceRefresh && dailyStatsCache && (now - lastDailyFetch) < CACHE_TTL) {
     return dailyStatsCache;
   }
-  const apiKeys = loadApiKeys();
+  const apiKeys = loadApiKeys(configPath);
   const stats = await getAllKeyStats(apiKeys, 'daily');
   dailyStatsCache = stats;
   lastDailyFetch = now;
@@ -49,7 +60,7 @@ async function getMonthlyStats(forceRefresh = false) {
   if (!forceRefresh && monthlyStatsCache && (now - lastMonthlyFetch) < CACHE_TTL) {
     return monthlyStatsCache;
   }
-  const apiKeys = loadApiKeys();
+  const apiKeys = loadApiKeys(configPath);
   const stats = await getAllKeyStats(apiKeys, 'monthly');
   monthlyStatsCache = stats;
   lastMonthlyFetch = now;
@@ -307,6 +318,9 @@ console.error('========================================');
 console.error('Claude Stats MCP Server');
 console.error('========================================');
 console.error(`Transport: ${transport.toUpperCase()}`);
+if (configPath) {
+  console.error(`Config: ${configPath}`);
+}
 
 if (transport === 'http' || transport === 'httpStream') {
   console.error(`Port: ${port}`);

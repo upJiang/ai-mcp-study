@@ -88,28 +88,50 @@ CURRENT_VERSION=$(node -p "require('./package.json').version")
 printf "${GREEN}✅ 包名: ${PACKAGE_NAME}${NC}\n"
 printf "${GREEN}✅ 当前版本: ${CURRENT_VERSION}${NC}\n"
 
-# 4. 检查包名是否可用
-printf "\n${YELLOW}🔍 检查包名是否可用...${NC}\n"
-if npm view "$PACKAGE_NAME" &> /dev/null; then
-    printf "${YELLOW}⚠️  包名 ${PACKAGE_NAME} 已被使用${NC}\n\n"
-    printf "${CYAN}📌 解决方案:${NC}\n"
-    printf "   ${YELLOW}方案 1:${NC} 使用作用域包名\n"
-    printf "      修改 package.json 中的 name 为: ${GREEN}@your-org/${PACKAGE_NAME}${NC}\n"
-    printf "      需要 npm 组织账号，免费创建：https://www.npmjs.com/org/create\n\n"
-    printf "   ${YELLOW}方案 2:${NC} 修改包名\n"
-    printf "      编辑 package.json，将 name 改为其他名称\n"
-    printf "      例如: ${GREEN}${PACKAGE_NAME}-cli${NC} 或 ${GREEN}my-${PACKAGE_NAME}${NC}\n\n"
-    printf "   ${YELLOW}方案 3:${NC} 查看已发布的包\n"
-    printf "      访问: ${BLUE}https://www.npmjs.com/package/${PACKAGE_NAME}${NC}\n\n"
+# 4. 检查包是否已发布，比较版本号
+printf "\n${YELLOW}🔍 检查包发布状态...${NC}\n"
+REMOTE_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null)
 
-    read -p "是否继续发布（可能会失败）? [y/N]: " CONTINUE
-    if [[ ! $CONTINUE =~ ^[Yy]$ ]]; then
-        printf "${YELLOW}已取消发布${NC}\n"
-        printf "\n${CYAN}💡 修改包名后，再次运行此脚本即可${NC}\n"
-        exit 0
+if [ -n "$REMOTE_VERSION" ]; then
+    printf "${GREEN}✅ 包已存在于 npm${NC}\n"
+    printf "   本地版本: ${CYAN}${CURRENT_VERSION}${NC}\n"
+    printf "   远程版本: ${CYAN}${REMOTE_VERSION}${NC}\n\n"
+
+    # 比较版本号
+    if [ "$CURRENT_VERSION" = "$REMOTE_VERSION" ]; then
+        printf "${YELLOW}⚠️  本地版本与远程版本相同，需要更新版本号${NC}\n\n"
+        NEED_VERSION_UPDATE=true
+    else
+        # 使用 node 比较版本号
+        VERSION_COMPARE=$(node -e "
+            const semver = require('semver');
+            if (semver.gt('$CURRENT_VERSION', '$REMOTE_VERSION')) {
+                console.log('gt');
+            } else {
+                console.log('lte');
+            }
+        " 2>/dev/null || echo "unknown")
+
+        if [ "$VERSION_COMPARE" = "gt" ]; then
+            printf "${GREEN}✅ 本地版本高于远程版本，可以发布${NC}\n"
+            NEED_VERSION_UPDATE=false
+        elif [ "$VERSION_COMPARE" = "lte" ]; then
+            printf "${YELLOW}⚠️  本地版本不高于远程版本，需要更新版本号${NC}\n\n"
+            NEED_VERSION_UPDATE=true
+        else
+            # 没有 semver，使用简单字符串比较
+            if [[ "$CURRENT_VERSION" > "$REMOTE_VERSION" ]]; then
+                printf "${GREEN}✅ 本地版本高于远程版本，可以发布${NC}\n"
+                NEED_VERSION_UPDATE=false
+            else
+                printf "${YELLOW}⚠️  本地版本不高于远程版本，需要更新版本号${NC}\n\n"
+                NEED_VERSION_UPDATE=true
+            fi
+        fi
     fi
 else
-    printf "${GREEN}✅ 包名可用${NC}\n"
+    printf "${GREEN}✅ 包名可用（首次发布）${NC}\n"
+    NEED_VERSION_UPDATE=false
 fi
 
 # 5. 检查 git 状态
@@ -228,31 +250,49 @@ printf "${GREEN}✅ 构建成功${NC}\n"
 
 # 8. 选择版本类型
 printf "\n${YELLOW}📦 选择版本更新类型:${NC}\n"
-printf "   当前版本: ${CYAN}${CURRENT_VERSION}${NC}\n\n"
+printf "   当前版本: ${CYAN}${CURRENT_VERSION}${NC}\n"
+if [ -n "$REMOTE_VERSION" ]; then
+    printf "   远程版本: ${CYAN}${REMOTE_VERSION}${NC}\n"
+fi
+printf "\n"
 printf "   ${GREEN}1)${NC} patch (修复版本，如 1.0.0 → 1.0.1)\n"
 printf "      适用于: bug 修复、小改进\n\n"
 printf "   ${GREEN}2)${NC} minor (次版本，如 1.0.0 → 1.1.0)\n"
 printf "      适用于: 新功能、向下兼容的更新\n\n"
 printf "   ${GREEN}3)${NC} major (主版本，如 1.0.0 → 2.0.0)\n"
 printf "      适用于: 破坏性更新、大版本升级\n\n"
-printf "   ${GREEN}4)${NC} 跳过版本更新（使用当前版本 ${CURRENT_VERSION}）\n\n"
+
+if [ "$NEED_VERSION_UPDATE" = true ]; then
+    printf "   ${RED}4)${NC} 跳过版本更新 ${RED}(不推荐，版本冲突将导致发布失败)${NC}\n\n"
+    printf "${YELLOW}⚠️  检测到需要更新版本，建议选择 1/2/3${NC}\n\n"
+else
+    printf "   ${GREEN}4)${NC} 跳过版本更新（使用当前版本 ${CURRENT_VERSION}）\n\n"
+fi
 
 read -p "请选择 [1/2/3/4]: " VERSION_CHOICE
 
 case $VERSION_CHOICE in
     1)
         printf "${YELLOW}更新 patch 版本...${NC}\n"
-        npm version patch
+        npm version patch --no-git-tag-version
         ;;
     2)
         printf "${YELLOW}更新 minor 版本...${NC}\n"
-        npm version minor
+        npm version minor --no-git-tag-version
         ;;
     3)
         printf "${YELLOW}更新 major 版本...${NC}\n"
-        npm version major
+        npm version major --no-git-tag-version
         ;;
     4)
+        if [ "$NEED_VERSION_UPDATE" = true ]; then
+            printf "${RED}⚠️  警告：版本相同或更低，发布可能失败${NC}\n"
+            read -p "确定跳过版本更新? [y/N]: " SKIP_CONFIRM
+            if [[ ! $SKIP_CONFIRM =~ ^[Yy]$ ]]; then
+                printf "${YELLOW}请重新选择版本类型${NC}\n"
+                exec "$0" "$@"
+            fi
+        fi
         printf "${YELLOW}跳过版本更新${NC}\n"
         ;;
     *)
@@ -337,10 +377,7 @@ printf "{\n"
 printf "  \"mcpServers\": {\n"
 printf "    \"claude-stats\": {\n"
 printf "      \"command\": \"npx\",\n"
-printf "      \"args\": [\"-y\", \"${PACKAGE_NAME}\"],\n"
-printf "      \"env\": {\n"
-printf "        \"KEYS_CONFIG_PATH\": \"/path/to/keys.json\"\n"
-printf "      }\n"
+printf "      \"args\": [\"-y\", \"${PACKAGE_NAME}\", \"--config\", \"/path/to/keys.json\"]\n"
 printf "    }\n"
 printf "  }\n"
 printf "}\n"
