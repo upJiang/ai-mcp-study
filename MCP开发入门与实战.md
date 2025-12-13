@@ -610,7 +610,415 @@ callMcpTool('http://localhost:8000', 'query_data', { keyword: 'test' });
 
 ---
 
-## 五、实战：开发一个最简易的 MCP
+## 五、MCP 在工作中的实际应用
+
+本章重点介绍几个在日常开发中非常实用的 MCP 服务，以及它们在 **Claude Code** 中的配置和使用方式。
+
+### 1. Figma MCP - 设计稿还原神器
+
+**Figma MCP** 可以让 AI 直接读取 Figma 设计稿的结构、样式、尺寸等信息，实现精准的设计稿还原。
+
+#### 安装与配置
+
+**Claude Code 配置（~/.claude.json）：**
+
+```json
+{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "你的 Figma API Key"
+      }
+    }
+  }
+}
+```
+
+**获取 Figma API Key：**
+1. 登录 Figma 账号
+2. 进入 Settings → Account → Personal access tokens
+3. 点击 "Create new token" 生成 API Key
+
+#### 使用方式
+
+当你需要还原设计稿时，只需要把 Figma 链接发给 Claude Code：
+
+```
+用户：请根据这个设计稿实现页面
+https://www.figma.com/design/xxxxx/ProjectName?node-id=123-456
+
+Claude Code 会：
+1. 调用 get_design_context 获取设计稿结构和样式
+2. 调用 get_screenshot 获取设计稿截图对照
+3. 根据获取的信息生成代码
+```
+
+#### 核心工具说明
+
+| 工具名 | 功能 | 使用场景 |
+|-------|------|---------|
+| `get_design_context` | 获取节点的设计信息和代码建议 | 主要工具，获取完整设计数据 |
+| `get_screenshot` | 获取设计稿截图 | 对照检查还原效果 |
+| `get_metadata` | 获取节点结构（XML 格式） | 了解页面层级结构 |
+| `get_variable_defs` | 获取设计变量定义 | 获取颜色、字体等变量 |
+| `get_code_connect_map` | 获取 Code Connect 映射 | 关联设计与代码组件 |
+
+#### 实际案例
+
+```
+用户：帮我把这个 Figma 设计稿还原成微信小程序页面
+https://www.figma.com/design/abc123/MiniApp?node-id=1-100
+
+Claude Code 执行流程：
+1. 解析 URL，提取 fileKey=abc123, nodeId=1:100
+2. 调用 mcp__figma__get_design_context 获取设计数据
+3. 获取所有子节点的样式、尺寸、颜色
+4. 按照小程序规范生成 WXML + WXSS 代码
+5. 图片使用占位符，尺寸按设计稿 px 的两倍转换为 rpx
+```
+
+**注意事项：**
+- 确保你有设计稿的访问权限
+- 复杂设计稿可能需要分节点获取
+- 图片资源需要单独导出处理
+
+---
+
+### 2. Context7 MCP - 实时文档查询
+
+**Context7 MCP** 解决了 AI 知识截止日期的问题，可以实时获取各种库和框架的最新文档。
+
+#### 安装与配置
+
+**Claude Code 配置（~/.claude.json）：**
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp"]
+    }
+  }
+}
+```
+
+无需 API Key，开箱即用。
+
+#### 使用方式
+
+当你需要查询最新的库文档时：
+
+```
+用户：Next.js 15 的 App Router 怎么配置动态路由？
+
+Claude Code 会：
+1. 调用 resolve-library-id 查找 Next.js 对应的库 ID
+2. 调用 get-library-docs 获取最新文档
+3. 基于最新文档回答问题
+```
+
+#### 核心工具说明
+
+| 工具名 | 功能 | 参数 |
+|-------|------|------|
+| `resolve-library-id` | 将库名解析为 Context7 ID | `libraryName`: 库名称 |
+| `get-library-docs` | 获取库的文档内容 | `context7CompatibleLibraryID`: 库 ID<br>`topic`: 查询主题<br>`mode`: code/info |
+
+#### 实际案例
+
+```
+用户：Tailwind CSS 4.0 有什么新特性？怎么升级？
+
+Claude Code 执行流程：
+1. 调用 resolve-library-id("tailwindcss") → 返回 "/tailwindlabs/tailwindcss"
+2. 调用 get-library-docs({
+     context7CompatibleLibraryID: "/tailwindlabs/tailwindcss",
+     topic: "upgrade v4",
+     mode: "info"
+   })
+3. 获取最新的 v4 升级指南
+4. 基于最新文档给出升级建议
+```
+
+#### 支持的库示例
+
+Context7 覆盖了主流的开发库：
+
+- **前端框架**：React, Vue, Next.js, Nuxt, Svelte
+- **CSS 框架**：Tailwind CSS, Ant Design, Element Plus
+- **后端框架**：Express, Fastify, NestJS
+- **数据库**：Prisma, Drizzle, MongoDB, Supabase
+- **工具库**：Zod, Axios, Lodash 等
+
+**使用技巧：**
+- `mode: "code"` 获取 API 参考和代码示例
+- `mode: "info"` 获取概念指南和架构说明
+- `topic` 参数可以精确定位到特定功能
+
+---
+
+### 3. Playwright MCP - Chrome 浏览器自动化
+
+**Playwright MCP** 让 AI 能够直接控制 Chrome 浏览器，实现页面导航、元素交互、截图、表单填写等自动化操作。非常适合前端开发调试、E2E 测试和网页数据抓取。
+
+#### 安装与配置
+
+**Claude Code 配置（~/.claude.json）：**
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-playwright"]
+    }
+  }
+}
+```
+
+无需额外安装，npx 会自动下载依赖。首次运行时会自动安装 Chromium 浏览器。
+
+#### 使用方式
+
+当你需要操作浏览器时：
+
+```
+用户：帮我打开百度首页，搜索"MCP 协议"，然后截图
+
+Claude Code 会：
+1. 调用 playwright_navigate 打开 https://www.baidu.com
+2. 调用 playwright_fill 填写搜索框
+3. 调用 playwright_click 点击搜索按钮
+4. 调用 playwright_screenshot 截取结果页面
+```
+
+#### 核心工具说明
+
+| 工具名 | 功能 | 使用场景 |
+|-------|------|---------|
+| `playwright_navigate` | 导航到指定 URL | 打开网页 |
+| `playwright_screenshot` | 截取页面截图 | 查看页面状态、对比效果 |
+| `playwright_click` | 点击元素 | 按钮点击、链接跳转 |
+| `playwright_fill` | 填写输入框 | 表单填写、搜索输入 |
+| `playwright_hover` | 鼠标悬停 | 触发悬停效果 |
+| `playwright_select` | 下拉框选择 | 选择选项 |
+| `playwright_evaluate` | 执行 JavaScript | 获取页面数据、调试 |
+| `playwright_get_visible_text` | 获取页面文本 | 提取页面内容 |
+| `playwright_get_visible_html` | 获取页面 HTML | 分析页面结构 |
+| `playwright_console_logs` | 获取控制台日志 | 调试 JS 错误 |
+| `playwright_press_key` | 按键操作 | Enter 确认、快捷键 |
+| `playwright_close` | 关闭浏览器 | 释放资源 |
+
+#### 实际案例
+
+**案例 1：自动化测试登录流程**
+
+```
+用户：帮我测试一下登录页面是否正常工作
+
+Claude Code 执行流程：
+1. 调用 playwright_navigate({ url: "http://localhost:3000/login" })
+   → 打开登录页面
+2. 调用 playwright_fill({ selector: "#username", value: "testuser" })
+   → 填写用户名
+3. 调用 playwright_fill({ selector: "#password", value: "123456" })
+   → 填写密码
+4. 调用 playwright_click({ selector: "button[type=submit]" })
+   → 点击登录按钮
+5. 调用 playwright_screenshot({ name: "login-result" })
+   → 截图查看结果
+6. 调用 playwright_get_visible_text()
+   → 检查是否登录成功
+```
+
+**案例 2：抓取网页数据**
+
+```
+用户：帮我获取这个页面的商品列表信息
+https://example.com/products
+
+Claude Code 执行流程：
+1. 调用 playwright_navigate({ url: "https://example.com/products" })
+   → 打开商品页面
+2. 调用 playwright_evaluate({
+     script: "Array.from(document.querySelectorAll('.product')).map(el => ({
+       name: el.querySelector('.name').textContent,
+       price: el.querySelector('.price').textContent
+     }))"
+   })
+   → 执行 JS 提取商品数据
+3. 返回结构化的商品列表
+```
+
+**案例 3：页面 UI 验证**
+
+```
+用户：帮我检查首页在不同设备上的显示效果
+
+Claude Code 执行流程：
+1. 调用 playwright_navigate({ url: "http://localhost:3000", width: 1920, height: 1080 })
+   → 桌面端访问
+2. 调用 playwright_screenshot({ name: "desktop-view", fullPage: true })
+   → 截取桌面端全页面
+3. 调用 playwright_resize({ device: "iPhone 13" })
+   → 切换到 iPhone 13 视口
+4. 调用 playwright_screenshot({ name: "mobile-view", fullPage: true })
+   → 截取移动端全页面
+5. 对比两张截图，分析响应式布局问题
+```
+
+**案例 4：调试 JavaScript 错误**
+
+```
+用户：页面有 JS 报错，帮我排查一下
+
+Claude Code 执行流程：
+1. 调用 playwright_navigate({ url: "http://localhost:3000" })
+   → 打开页面
+2. 调用 playwright_console_logs({ type: "error" })
+   → 获取控制台错误日志
+3. 分析错误堆栈，定位问题代码
+4. 给出修复建议
+```
+
+**高级用法：API 请求测试**
+
+Playwright MCP 还支持直接发送 HTTP 请求：
+
+```
+用户：帮我测试一下这个 API 接口
+
+Claude Code 执行流程：
+1. 调用 playwright_post({
+     url: "http://localhost:8080/api/users",
+     value: '{"name": "test", "email": "test@example.com"}',
+     headers: { "Content-Type": "application/json" }
+   })
+   → 发送 POST 请求
+2. 分析返回结果，验证接口行为
+```
+
+---
+
+### 4. 多个 MCP 协同使用
+
+在实际工作中，多个 MCP 可以协同工作，提高开发效率。
+
+#### 完整的 Claude Code 配置示例
+
+```json
+{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "your-figma-api-key"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-playwright"]
+    },
+    "claude-stats": {
+      "command": "npx",
+      "args": ["claude-stats-mcp"]
+    }
+  }
+}
+```
+
+#### 协同工作场景
+
+**场景：从设计稿到页面上线**
+
+```
+1. 【Figma MCP】获取设计稿，生成页面代码
+   → "请根据这个 Figma 链接实现页面"
+
+2. 【Context7 MCP】查询最新的组件库用法
+   → "Ant Design 5.x 的 Table 组件怎么实现虚拟滚动？"
+
+3. 【Playwright MCP】打开页面检查效果
+   → "帮我打开 localhost:3000 看看页面效果，截个图"
+
+4. 【Playwright MCP】自动化测试
+   → "帮我测试一下登录流程是否正常"
+```
+
+---
+
+### 5. 常见问题与解决方案
+
+#### Q1: MCP 服务启动失败
+
+**检查步骤：**
+```bash
+# 1. 确认 Node.js 版本 >= 18
+node -v
+
+# 2. 手动测试 MCP 是否能启动
+npx -y @context7/mcp
+
+# 3. 检查配置文件格式
+cat ~/.claude.json | jq .
+```
+
+#### Q2: Figma MCP 获取设计稿失败
+
+**可能原因：**
+- API Key 无效或过期
+- 没有设计稿访问权限
+- URL 格式不正确
+
+**解决方法：**
+```bash
+# 检查 API Key 是否有效
+curl -H "X-Figma-Token: YOUR_API_KEY" \
+  "https://api.figma.com/v1/me"
+```
+
+#### Q3: Playwright MCP 浏览器启动失败
+
+**可能原因：**
+- Chromium 未安装或安装失败
+- 系统缺少依赖库
+
+**解决方法：**
+```bash
+# 手动安装 Playwright 浏览器
+npx playwright install chromium
+
+# 如果是 Linux 系统，可能需要安装依赖
+npx playwright install-deps
+```
+
+**常见错误处理：**
+- 如果提示权限问题，尝试使用 `sudo`
+- 如果在 CI 环境，使用 `headless: true` 模式
+
+#### Q4: Context7 返回空结果
+
+**可能原因：**
+- 库名拼写错误
+- 该库暂未收录
+
+**解决方法：**
+```
+先使用 resolve-library-id 确认库是否存在：
+"帮我查一下 Context7 是否收录了 xxx 库"
+```
+
+---
+
+## 六、实战：开发一个最简易的 MCP
 
 接下来，我们用 **Node.js + FastMCP** 开发一个完整的 MCP 服务。
 
@@ -787,7 +1195,7 @@ server.addTool({
 
 ---
 
-## 六、NPX 发布流程
+## 七、NPX 发布流程
 
 开发完成后，可以发布到 npm，让其他用户通过 `npx` 直接使用。
 
@@ -858,103 +1266,20 @@ claude-stats-mcp
 
 ---
 
-## 七、HTTPS 发布简要流程
+## 八、其他部署方式简介
 
-如果需要远程访问，可以通过 HTTPS 方式部署。
+### HTTPS 远程部署
 
-### 1. 启动 HTTP 模式
+如果需要远程访问（多人协作、生产环境），MCP 也支持 HTTP/HTTPS 模式部署：
 
 ```bash
-# 通过环境变量启动
+# 启动 HTTP 模式
 MCP_TRANSPORT=http MCP_PORT=8000 npm start
 ```
 
-服务将运行在 `http://localhost:8000/mcp`
+然后通过 Nginx + SSL 证书（如 Let's Encrypt）配置 HTTPS 访问。
 
-### 2. Nginx 反向代理
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
-
-    # SSL 证书
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-    location /mcp {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-}
-```
-
-### 3. 获取 SSL 证书
-
-```bash
-# 使用 Let's Encrypt 免费证书
-sudo certbot --nginx -d your-domain.com
-```
-
-配置完成后，在 Cursor 中使用 `https://your-domain.com/mcp` 即可访问。
-
----
-
-## 八、Python Demo 简介
-
-FastMCP 同样支持 Python，使用装饰器语法更加简洁。
-
-### 核心代码
-
-```python
-#!/usr/bin/env python3
-from fastmcp import FastMCP
-
-# 创建 MCP 实例
-mcp = FastMCP(
-    name="Claude Stats MCP",
-    instructions="用于查询 Claude Code 使用统计的 MCP 服务器"
-)
-
-# 使用装饰器定义工具
-@mcp.tool()
-async def query_today_stats(force_refresh: bool = False) -> str:
-    """
-    查询今日所有账号的使用统计
-
-    Args:
-        force_refresh: 是否强制刷新缓存数据
-
-    Returns:
-        JSON 格式的统计数据
-    """
-    stats = await get_daily_stats(force_refresh)
-    return json.dumps(stats, ensure_ascii=False, indent=2)
-
-@mcp.tool()
-async def query_user_stats(user_name: str, period: str = 'daily') -> str:
-    """查询特定用户的统计数据"""
-    user = await find_user(user_name, period)
-    return json.dumps(user, ensure_ascii=False, indent=2)
-
-# 启动服务器
-if __name__ == "__main__":
-    mcp.run(transport='stdio')  # 或 transport='http', port=8000
-```
-
-### Node.js vs Python 对比
-
-| 特性 | Node.js (TypeScript) | Python |
-|-----|---------------------|--------|
-| 工具定义 | `server.addTool({...})` | `@mcp.tool()` 装饰器 |
-| 参数验证 | Zod | 类型注解 + docstring |
-| 异步支持 | async/await | async/await |
-| 启动方式 | `server.start({...})` | `mcp.run(...)` |
-
-两者功能完全相同，选择哪个取决于你的技术栈偏好。
+**注意**：HTTPS 部署涉及服务器配置、域名、SSL 证书等，学习成本较高。对于大多数个人使用场景，**推荐使用 npx 方式**，配置简单、即开即用。
 
 ---
 
@@ -1011,6 +1336,224 @@ MCP 正在快速成为 AI 工具集成的行业标准：
 
 ---
 
+## 十一、MCP 发布与使用完整指南
+
+### npm 注册与登录
+
+#### 1. 注册 npm 账号
+
+访问 https://www.npmjs.com/，点击 "Sign Up"，填写：
+- **Username**（用户名）：全网唯一，如 `zhangsan-dev`
+- **Email**（邮箱）：你的邮箱
+- **Password**（密码）：至少10个字符
+
+验证邮箱后即可使用。
+
+#### 2. 终端登录
+
+```bash
+npm login
+# 输入用户名、密码、邮箱
+
+# 验证登录
+npm whoami
+```
+
+---
+
+### 自动化发布脚本
+
+在项目根目录创建 `publish-npm.sh`：
+
+```bash
+#!/bin/bash
+
+echo "📦 开始发布 MCP 到 npm..."
+
+# 1. 检查登录
+if ! npm whoami > /dev/null 2>&1; then
+  echo "❌ 未登录 npm，请先执行 npm login"
+  exit 1
+fi
+
+# 2. 构建项目
+echo "🔨 构建项目..."
+npm run build
+
+# 3. 提示选择版本
+echo "请选择版本更新类型："
+echo "1) patch (1.0.0 → 1.0.1)"
+echo "2) minor (1.0.0 → 1.1.0)"
+echo "3) major (1.0.0 → 2.0.0)"
+read -p "选择 (1/2/3): " version_type
+
+case $version_type in
+  1) npm version patch ;;
+  2) npm version minor ;;
+  3) npm version major ;;
+  *) echo "❌ 无效选择"; exit 1 ;;
+esac
+
+# 4. 发布
+echo "🚀 发布到 npm..."
+npm publish --access public
+
+echo "✅ 发布成功！"
+echo "📝 用户可以通过 npx 你的包名 使用"
+```
+
+**使用方式：**
+
+```bash
+chmod +x publish-npm.sh
+./publish-npm.sh
+```
+
+---
+
+### 在 Cursor/Claude Code 中使用
+
+#### Cursor 配置
+
+编辑 `~/.cursor/mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "my-mcp": {
+      "command": "npx",
+      "args": ["-y", "你的npm包名"],
+      "env": {
+        "API_KEY": "your-key"
+      }
+    }
+  }
+}
+```
+
+#### Claude Code 配置
+
+编辑 `~/.claude.json`：
+
+```json
+{
+  "mcpServers": {
+    "my-mcp": {
+      "command": "npx",
+      "args": ["-y", "你的npm包名"]
+    }
+  }
+}
+```
+
+配置后重启 AI 应用即可使用。
+
+---
+
+### 在 AI Agent 中使用（编程方式）
+
+#### 方式 1：STDIO 模式（推荐）
+
+```typescript
+import { spawn } from 'child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio';
+import Anthropic from '@anthropic-ai/sdk';
+
+// 1. 启动 MCP Server
+const process = spawn('npx', ['-y', '你的npm包名']);
+
+const transport = new StdioClientTransport({ command: process });
+const mcpClient = new Client(
+  { name: 'my-agent', version: '1.0.0' },
+  { capabilities: {} }
+);
+await mcpClient.connect(transport);
+
+// 2. 获取工具列表
+const tools = await mcpClient.request({ method: 'tools/list' }, {});
+
+// 3. 转换为 Claude API 格式
+const claudeTools = tools.tools.map(t => ({
+  name: t.name,
+  description: t.description,
+  input_schema: t.inputSchema
+}));
+
+// 4. 调用 Claude API
+const anthropic = new Anthropic();
+const response = await anthropic.messages.create({
+  model: 'claude-opus-4-5-20251101',
+  max_tokens: 1024,
+  tools: claudeTools,
+  messages: [{ role: 'user', content: '用户问题' }]
+});
+
+// 5. 执行 MCP 工具
+if (response.content[0].type === 'tool_use') {
+  const result = await mcpClient.request({
+    method: 'tools/call',
+    params: {
+      name: response.content[0].name,
+      arguments: response.content[0].input
+    }
+  }, {});
+
+  // 将结果返回给 Claude...
+}
+```
+
+#### 方式 2：HTTP 模式（了解）
+
+对于多人协作的生产环境，MCP 也支持 HTTP 模式部署。但配置较为复杂，涉及服务器、网络、认证等，学习成本较高。**日常使用推荐 STDIO 模式（方式 1）**。
+
+---
+
+### 附录：package.json 配置
+
+```json
+{
+  "name": "你的包名",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "你的包名": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  }
+}
+```
+
+**重要提示：** 入口文件第一行必须是 `#!/usr/bin/env node`
+
+---
+
+### 快速总结
+
+**npm 发布流程：**
+```
+注册账号 → 登录 → 构建 → 发布
+```
+
+**用户使用：**
+```bash
+# Cursor 配置后直接使用，或
+npx 你的包名
+```
+
+**Agent 调用：**
+```
+启动 MCP Client → 获取工具 → 调用 Claude API → 执行工具
+```
+
+完整代码示例请参考项目中的 `node-mcp-demo` 目录。
+
+---
+
 ## 参考资源
 
 **官方资源：**
@@ -1033,4 +1576,4 @@ MCP 正在快速成为 AI 工具集成的行业标准：
 
 ---
 
-> 本文基于项目 `ai-mcp-study` 实战总结，包含 Node.js 和 Python 两个完整 Demo。
+> 本文基于项目 `ai-mcp-study` 实战总结，包含完整的 Node.js Demo。
