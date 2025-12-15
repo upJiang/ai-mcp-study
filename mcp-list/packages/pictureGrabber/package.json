@@ -1,9 +1,15 @@
 {
   "name": "wfw-tool-1-map",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP 图片采集工具 - 采集网页上的 jpg/png 图片并保存到桌面",
   "main": "build/index.js",
   "type": "module",
+  "bin": {
+    "wfw-tool-1-map": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js"
