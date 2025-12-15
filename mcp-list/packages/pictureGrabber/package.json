@@ -1,0 +1,26 @@
+{
+  "name": "wfw-tool-1-map",
+  "version": "1.0.0",
+  "description": "MCP 图片采集工具 - 采集网页上的 jpg/png 图片并保存到桌面",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "image-collector",
+    "playwright"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  }
+}
