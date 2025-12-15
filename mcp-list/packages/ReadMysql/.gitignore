@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Query logs
+log/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials (never commit!)
+config.py
+.env
+
+# Query outputs
+query/*.json
+query/*.csv
+
+# Temporary files and analysis reports
+tmp/
+!tmp/MCP_BEST_PRACTICES_AUDIT.md
+*.md.bak
