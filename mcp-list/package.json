@@ -1,0 +1,22 @@
+{
+  "name": "mcp-list",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP services monorepo with auto-publish to npm",
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/detect-changes.js",
+    "publish:all": "node scripts/publish-all.js"
+  },
+  "keywords": [
+    "mcp",
+    "fastmcp",
+    "model-context-protocol",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

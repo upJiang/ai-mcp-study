@@ -1,0 +1,52 @@
+name: Auto Publish MCP Packages
+
+on:
+  # PR 合并到 main 分支时触发
+  push:
+    branches:
+      - main
+    paths:
+      - 'mcp-list/packages/**'
+      - 'mcp-list/scripts/**'
+
+  # 手动触发（用于测试或紧急发布）
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史（用于比较版本）
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install mcp-list dependencies
+        working-directory: mcp-list
+        run: npm install
+
+      - name: Make scripts executable
+        working-directory: mcp-list
+        run: chmod +x scripts/*.js
+
+      - name: Detect and publish changed packages
+        working-directory: mcp-list
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/publish-all.js
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ 自动发布完成"
+          echo "查看上方日志了解哪些包已更新"
