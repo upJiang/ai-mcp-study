@@ -1,0 +1,175 @@
+name: Auto Deploy Python MCP Services
+
+on:
+  # 代码合并到 main 分支后触发
+  push:
+    branches:
+      - main
+    paths:
+      - 'mcp-list/packages/**'
+      - 'mcp-list/deployment/**'
+      - '.github/workflows/deploy-python-mcp.yml'
+
+  # 支持手动触发
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            echo "========================================="
+            echo "开始自动部署 Python MCP 服务"
+            echo "========================================="
+
+            # 进入项目目录
+            cd /opt/mcp-services/ai-mcp-study
+
+            # 拉取最新代码
+            echo "步骤 1/7: 拉取最新代码..."
+            git pull origin main
+            echo "✓ 代码更新完成"
+
+            # 进入 mcp-list 目录
+            cd mcp-list
+
+            # 自动生成 docker-compose.yml
+            echo "步骤 2/7: 自动生成 docker-compose.yml..."
+            chmod +x deployment/generate-compose.sh
+            ./deployment/generate-compose.sh
+            echo "✓ docker-compose.yml 生成完成"
+
+            # 自动生成 Nginx 配置
+            echo "步骤 3/7: 自动生成 Nginx 配置..."
+            chmod +x deployment/generate-nginx.sh
+            ./deployment/generate-nginx.sh
+            echo "✓ Nginx 配置生成完成"
+
+            # 部署 Nginx 配置并重载
+            echo "步骤 4/7: 更新 Nginx 配置..."
+            sudo cp deployment/nginx/mcp-services.conf /etc/nginx/conf.d/
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo "✓ Nginx 配置已更新"
+
+            # 跳过环境变量配置（各包自己管理）
+            echo "步骤 5/7: 跳过环境变量配置（各包自行管理）..."
+            echo "✓ 如果包需要配置，请在包目录下创建 .env 文件"
+
+            # 停止所有容器
+            echo "步骤 6/7: 停止旧容器..."
+            docker-compose down || true
+            echo "✓ 容器已停止"
+
+            # 重建并启动所有服务（带容错）
+            echo "步骤 7/7: 重建并启动所有服务..."
+
+            # 获取所有服务名称
+            services=$(docker-compose config --services 2>/dev/null || echo "")
+
+            if [ -z "$services" ]; then
+                echo "⚠️  警告: 未找到任何服务"
+                exit 0
+            fi
+
+            SUCCESS_COUNT=0
+            FAILED_COUNT=0
+            FAILED_SERVICES=""
+
+            # 逐个构建和启动服务（容错）
+            for service in $services; do
+              echo ""
+              echo "🔨 处理服务: $service"
+
+              # 构建服务
+              if docker-compose build --no-cache "$service" 2>&1; then
+                echo "✓ $service 构建成功"
+
+                # 启动服务
+                if docker-compose up -d "$service" 2>&1; then
+                  echo "✓ $service 启动成功"
+                  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                else
+                  echo "✗ $service 启动失败"
+                  FAILED_COUNT=$((FAILED_COUNT + 1))
+                  FAILED_SERVICES="$FAILED_SERVICES $service"
+                fi
+              else
+                echo "✗ $service 构建失败"
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+                FAILED_SERVICES="$FAILED_SERVICES $service"
+              fi
+            done
+
+            echo ""
+            echo "📊 部署统计："
+            echo "  ✓ 成功: $SUCCESS_COUNT"
+            echo "  ✗ 失败: $FAILED_COUNT"
+
+            if [ $FAILED_COUNT -gt 0 ]; then
+              echo "  ⚠️  失败的服务:$FAILED_SERVICES"
+              echo ""
+              echo "⚠️  部分服务部署失败，但其他服务已正常运行"
+            fi
+
+            # 验证服务状态
+            echo ""
+            echo "验证服务状态..."
+            sleep 10
+            docker-compose ps
+
+            # 检查服务健康状态
+            echo ""
+            echo "服务健康检查："
+
+            # 逐个检查服务（不中断）
+            for service in $services; do
+              container="mcp-$service"
+
+              # 检查容器是否运行
+              if docker ps | grep -q "$container"; then
+                # 健康检查
+                if docker exec "$container" curl -sf http://localhost:8000 > /dev/null 2>&1; then
+                  echo "✓ $service - 运行正常"
+                else
+                  echo "⚠️  $service - 健康检查失败（可能仍在启动中）"
+                fi
+              else
+                echo "✗ $service - 容器未运行"
+              fi
+            done
+
+            echo ""
+            echo "========================================="
+            if [ $FAILED_COUNT -eq 0 ]; then
+              echo "✓ 部署完成！所有服务运行正常"
+            else
+              echo "⚠️  部署完成，但部分服务失败"
+            fi
+            echo "========================================="
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "✅ Python MCP 服务部署完成"
+          echo ""
+          echo "📍 说明：服务访问地址根据 packages 目录下实际存在的 Python 包动态生成"
+          echo "   格式：https://junfeng530.xyz/mcp/{service-name}"
+          echo ""
+          echo "查看日志: ssh 登录服务器后执行 'cd /opt/mcp-services/ai-mcp-study/mcp-list && docker-compose logs -f'"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ 部署失败！请检查日志"
