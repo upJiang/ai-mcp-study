@@ -39,10 +39,33 @@ jobs:
             # 拉取最新代码
             echo "步骤 1/7: 拉取最新代码..."
             # 处理本地修改和未跟踪文件
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd
-            echo "✓ 代码更新完成"
+            # 增加 Git 缓冲区大小
+            git config http.postBuffer 524288000
+
+            # 重试机制（最多 3 次）
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              echo "尝试拉取代码... (尝试 $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+
+              if git fetch origin main; then
+                echo "✓ Fetch 成功"
+                git reset --hard origin/main
+                git clean -fd
+                echo "✓ 代码更新完成"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "⚠️  Fetch 失败，等待 5 秒后重试..."
+                  sleep 5
+                else
+                  echo "❌ Fetch 失败，已达到最大重试次数"
+                  exit 1
+                fi
+              fi
+            done
 
             # 进入 mcp-list 目录
             cd mcp-list
