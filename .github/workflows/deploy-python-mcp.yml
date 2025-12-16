@@ -39,6 +39,14 @@ jobs:
             # 拉取最新代码
             echo "步骤 1/7: 拉取最新代码..."
 
+            # 确保 GitHub 在 known_hosts 中（避免 Host key verification failed）
+            if ! grep -q "github.com" ~/.ssh/known_hosts 2>/dev/null; then
+              echo "添加 GitHub 到 known_hosts..."
+              mkdir -p ~/.ssh
+              ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null
+              echo "✓ GitHub 主机密钥已添加"
+            fi
+
             # 检查并切换到 SSH 远程 URL（避免 HTTPS 超时问题）
             # 使用兼容老版本 Git 的命令
             CURRENT_URL=$(git config --get remote.origin.url)
