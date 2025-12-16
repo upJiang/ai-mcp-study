@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  eventanalyzer:
+    build:
+      context: ./packages/EventAnalyzer
+      dockerfile: ../../deployment/Dockerfile.python-mcp
+    container_name: mcp-eventanalyzer
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MCP_TRANSPORT=http
+      - MCP_PORT=8000
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mcp-network:
+    driver: bridge

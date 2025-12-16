@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>埋点数据捕获</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>埋点数据捕获工具</h1>
+      <button id="clearBtn" class="btn btn-secondary">清空</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜索事件名称...">
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <span id="statsText">已捕获 0 条埋点</span>
+    </div>
+
+    <!-- List -->
+    <div class="tracking-list" id="trackingList">
+      <div class="empty-state">
+        <p>暂无捕获的埋点数据</p>
+        <p class="hint">访问包含埋点的网页，数据将自动捕获</p>
+      </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">埋点详情</h2>
+          <button id="modalClose" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-section">
+            <h3>基本信息</h3>
+            <div id="detailInfo"></div>
+          </div>
+
+          <div class="detail-section">
+            <h3>完整数据</h3>
+            <pre id="detailData" class="code-block"></pre>
+          </div>
+
+          <div class="detail-section">
+            <h3>快速操作</h3>
+            <div class="button-group">
+              <button id="copyEventNameBtn" class="btn btn-primary">复制事件名称</button>
+              <button id="copyJsonBtn" class="btn btn-primary">复制 JSON</button>
+              <button id="copyBase64Btn" class="btn btn-primary">复制 Base64</button>
+              <button id="copyMcpCmdBtn" class="btn btn-success">复制 MCP 命令</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../utils/decoder.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
