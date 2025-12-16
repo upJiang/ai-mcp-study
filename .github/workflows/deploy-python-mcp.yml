@@ -40,7 +40,8 @@ jobs:
             echo "步骤 1/7: 拉取最新代码..."
 
             # 检查并切换到 SSH 远程 URL（避免 HTTPS 超时问题）
-            CURRENT_URL=$(git remote get-url origin)
+            # 使用兼容老版本 Git 的命令
+            CURRENT_URL=$(git config --get remote.origin.url)
             SSH_URL="git@github.com:upJiang/ai-mcp-study.git"
 
             if [[ "$CURRENT_URL" == https* ]]; then
