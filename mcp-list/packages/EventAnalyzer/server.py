@@ -289,13 +289,42 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
 
 async def main():
     """启动 MCP Server"""
-    # 使用 stdio 模式
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
+    import os
+
+    # 检查运行模式
+    transport = os.getenv("MCP_TRANSPORT", "stdio").lower()
+
+    if transport == "http":
+        # HTTP/SSE 模式（用于远程访问）
+        import uvicorn
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Route
+
+        # 创建 SSE transport
+        sse = SseServerTransport("/messages")
+
+        # 创建 Starlette app
+        app = Starlette(
+            routes=[
+                Route("/sse", endpoint=sse.connect_sse),
+                Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
+            ],
         )
+
+        # 启动 HTTP 服务器
+        port = int(os.getenv("MCP_PORT", "8000"))
+        config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+        server_instance = uvicorn.Server(config)
+        await server_instance.serve()
+    else:
+        # stdio 模式（用于本地）
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                server.create_initialization_options()
+            )
 
 
 if __name__ == "__main__":
