@@ -38,7 +38,10 @@ jobs:
 
             # 拉取最新代码
             echo "步骤 1/7: 拉取最新代码..."
-            git pull origin main
+            # 处理本地修改和未跟踪文件
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
             echo "✓ 代码更新完成"
 
             # 进入 mcp-list 目录
