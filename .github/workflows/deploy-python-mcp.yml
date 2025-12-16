@@ -63,6 +63,20 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
+
+            # 清理 packages 目录中不在 Git 的旧包
+            echo "清理旧包..."
+            cd mcp-list/packages
+            git ls-files . | sed 's|/.*||' | sort -u > /tmp/git-packages.txt
+            ls -d */ 2>/dev/null | sed 's|/||' | sort -u > /tmp/local-packages.txt
+            comm -13 /tmp/git-packages.txt /tmp/local-packages.txt | while read dir; do
+              if [ -d "$dir" ]; then
+                echo "删除旧包: $dir"
+                rm -rf "$dir"
+              fi
+            done
+            cd ../..
+
             echo "✓ 代码更新完成"
 
             # 进入 mcp-list 目录
