@@ -17,6 +17,10 @@ COPY requirements.txt .
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 构建时间参数（用于破坏 COPY 层缓存，确保代码更新）
+ARG BUILD_TIME
+ENV BUILD_TIME=${BUILD_TIME}
+
 # 复制所有源码
 COPY . .
 
