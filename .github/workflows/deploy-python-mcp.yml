@@ -66,6 +66,18 @@ jobs:
             echo "获取远程最新代码..."
             git fetch origin --force --prune --tags
 
+            echo "验证远程分支状态..."
+            echo "  远程 main: $(git log --oneline origin/main -1)"
+            echo "  触发提交: $GITHUB_SHA"
+
+            # 验证远程分支是否包含触发的提交
+            if ! git branch -r --contains "$GITHUB_SHA" | grep -q "origin/main"; then
+              echo "⚠️  警告：远程 main 分支还不包含触发提交，等待 5 秒后重试..."
+              sleep 5
+              git fetch origin --force --prune --tags
+              echo "  重试后远程 main: $(git log --oneline origin/main -1)"
+            fi
+
             echo "重置到远程 main 分支..."
             git reset --hard origin/main
 
