@@ -88,18 +88,19 @@ jobs:
             ./deployment/generate-compose.sh
             echo "✓ docker-compose.yml 生成完成"
 
-            # 自动生成 Nginx 配置
-            echo "步骤 3/7: 自动生成 Nginx 配置..."
-            chmod +x deployment/generate-nginx.sh
-            ./deployment/generate-nginx.sh
-            echo "✓ Nginx 配置生成完成"
+            # 清理可能的冲突配置
+            echo "步骤 3/7: 清理可能的冲突 Nginx 配置..."
+            if [ -f /etc/nginx/conf.d/mcp-services.conf ]; then
+              echo "删除旧的自动生成配置（避免与主配置冲突）..."
+              sudo rm -f /etc/nginx/conf.d/mcp-services.conf
+              echo "✓ 已删除 /etc/nginx/conf.d/mcp-services.conf"
+            fi
 
-            # 部署 Nginx 配置并重载
-            echo "步骤 4/7: 更新 Nginx 配置..."
-            sudo cp deployment/nginx/mcp-services.conf /etc/nginx/conf.d/
+            # 验证 Nginx 配置
+            echo "步骤 4/7: 验证 Nginx 配置..."
+            echo "使用 /www/server/nginx/conf/nginx.conf 中已有的 MCP location 块"
             sudo nginx -t
-            sudo systemctl reload nginx
-            echo "✓ Nginx 配置已更新"
+            echo "✓ Nginx 配置验证通过"
 
             # 跳过环境变量配置（各包自己管理）
             echo "步骤 5/7: 跳过环境变量配置（各包自行管理）..."
