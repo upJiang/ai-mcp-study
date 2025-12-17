@@ -21,6 +21,7 @@ EOF
 echo "扫描 packages 目录..."
 PYTHON_COUNT=0
 NPM_COUNT=0
+HOST_PORT=8100  # 起始端口号，每个服务递增
 
 for dir in "$PACKAGES_DIR"/*/ ; do
     if [ -d "$dir" ]; then
@@ -55,6 +56,8 @@ for dir in "$PACKAGES_DIR"/*/ ; do
       - PYTHONUNBUFFERED=1
       - MCP_TRANSPORT=http
       - MCP_PORT=8000
+    ports:
+      - "$HOST_PORT:8000"  # 映射容器端口到宿主机
     restart: unless-stopped
     networks:
       - mcp-network
@@ -65,6 +68,7 @@ for dir in "$PACKAGES_DIR"/*/ ; do
         max-file: "3"
 
 EOF
+            HOST_PORT=$((HOST_PORT + 1))  # 为下一个服务递增端口
         # 跳过 npm 包（仅统计）
         elif [ "$has_package_json" = true ]; then
             echo "⊗ 跳过 npm 包: $package_name (由 publish.yml 处理)"

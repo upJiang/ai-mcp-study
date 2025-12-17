@@ -10,6 +10,8 @@ services:
       - PYTHONUNBUFFERED=1
       - MCP_TRANSPORT=http
       - MCP_PORT=8000
+    ports:
+      - "8100:8000"  # 映射容器端口 8000 到宿主机端口 8100
     restart: unless-stopped
     networks:
       - mcp-network

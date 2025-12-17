@@ -44,14 +44,21 @@ for service in $services; do
     url_path="/mcp/$service"
     container_name="mcp-$service"
 
-    # 生成 location 块（支持 SSE）
+    # 从 docker-compose.yml 中读取端口映射（格式：XXXX:8000）
+    host_port=$(grep -A 20 "container_name: $container_name" "$DOCKER_COMPOSE_FILE" | grep -m 1 "ports:" -A 1 | grep -oE '[0-9]+:8000' | cut -d':' -f1 || echo "8000")
+
+    if [ -z "$host_port" ]; then
+        host_port="8000"
+    fi
+
+    # 生成 location 块（支持 SSE，使用 localhost）
     location_block="
     # $service
     location $url_path {
         # 默认访问根路径时，代理到 /sse
         rewrite ^$url_path\$ /sse break;
         rewrite ^$url_path(/.*)?\$ \$1 break;
-        proxy_pass http://$container_name:8000;
+        proxy_pass http://127.0.0.1:$host_port;
 
         # 基础代理头
         proxy_set_header Host \$host;
@@ -104,7 +111,9 @@ echo "  - 输出文件: $OUTPUT_FILE"
 echo ""
 echo "生成的服务路由："
 for service in $services; do
-    echo "  - https://junfeng530.xyz/mcp/$service → mcp-$service:8000"
+    container_name="mcp-$service"
+    host_port=$(grep -A 20 "container_name: $container_name" "$DOCKER_COMPOSE_FILE" | grep -m 1 "ports:" -A 1 | grep -oE '[0-9]+:8000' | cut -d':' -f1 || echo "8000")
+    echo "  - https://junfeng530.xyz/mcp/$service → 127.0.0.1:$host_port"
 done
 echo ""
 echo "========================================="

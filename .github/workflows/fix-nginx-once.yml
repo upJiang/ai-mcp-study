@@ -57,7 +57,7 @@ jobs:
         # 默认访问根路径时，代理到 /sse
         rewrite ^/mcp/eventanalyzer$ /sse break;
         rewrite ^/mcp/eventanalyzer(/.*)?$ $1 break;
-        proxy_pass http://mcp-eventanalyzer:8000;
+        proxy_pass http://127.0.0.1:8100;
 
         # 基础代理头
         proxy_set_header Host $host;
