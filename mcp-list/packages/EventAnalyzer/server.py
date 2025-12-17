@@ -301,8 +301,8 @@ async def main():
         from starlette.requests import Request
         from starlette.responses import Response
 
-        # 创建 SSE transport
-        sse = SseServerTransport("/messages")
+        # 创建 SSE transport（使用相对路径，避免 nginx 代理时的路径问题）
+        sse = SseServerTransport("messages")
 
         # 纯 ASGI 应用，避免 Mount 的 307 重定向问题
         async def app(scope, receive, send):
