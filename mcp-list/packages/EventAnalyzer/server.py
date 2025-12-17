@@ -310,10 +310,10 @@ async def main():
                 request.scope,
                 request.receive,
                 request._send
-            ) as streams:
+            ) as (read_stream, write_stream):
                 await server.run(
-                    streams[0],
-                    streams[1],
+                    read_stream,
+                    write_stream,
                     server.create_initialization_options()
                 )
 
