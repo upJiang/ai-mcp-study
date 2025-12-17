@@ -62,10 +62,17 @@ jobs:
               echo "✓ 已切换到 SSH: $SSH_URL"
             fi
 
-            # 处理本地修改和未跟踪文件
-            git fetch origin main
+            # 强制从远程获取最新代码
+            echo "获取远程最新代码..."
+            git fetch origin --force --prune --tags
+
+            echo "重置到远程 main 分支..."
             git reset --hard origin/main
+
+            echo "清理未跟踪文件..."
             git clean -fd
+
+            echo "✓ 当前版本: $(git log --oneline -1)"
 
             # 清理 packages 目录中不在 Git 的旧包
             echo "清理旧包..."
