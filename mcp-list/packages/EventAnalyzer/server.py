@@ -308,7 +308,6 @@ async def main():
         # 连接 MCP server 到 SSE transport
         async def handle_sse(request):
             async with sse.connect_sse(
-                request.scope,
                 request.receive,
                 request.send
             ) as streams:
@@ -317,7 +316,6 @@ async def main():
                     streams[1],
                     server.create_initialization_options()
                 )
-            return Response()
 
         # 处理 POST 消息
         async def handle_post_message(request):
