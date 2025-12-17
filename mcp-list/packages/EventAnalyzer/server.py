@@ -304,10 +304,23 @@ async def main():
         # 创建 SSE transport
         sse = SseServerTransport("/messages")
 
+        # 连接 MCP server 到 SSE transport
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send
+            ) as streams:
+                await server.run(
+                    streams[0],
+                    streams[1],
+                    server.create_initialization_options()
+                )
+
         # 创建 Starlette app
         app = Starlette(
             routes=[
-                Route("/sse", endpoint=sse.connect_sse),
+                Route("/sse", endpoint=handle_sse),
                 Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
             ],
         )
