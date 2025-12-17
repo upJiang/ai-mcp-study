@@ -89,30 +89,48 @@ jobs:
             echo "✓ docker-compose.yml 生成完成"
 
             # 清理可能的冲突配置
-            echo "步骤 3/7: 清理可能的冲突 Nginx 配置..."
+            echo "步骤 3/8: 清理可能的冲突 Nginx 配置..."
             if [ -f /etc/nginx/conf.d/mcp-services.conf ]; then
               echo "删除旧的自动生成配置（避免与主配置冲突）..."
               sudo rm -f /etc/nginx/conf.d/mcp-services.conf
               echo "✓ 已删除 /etc/nginx/conf.d/mcp-services.conf"
             fi
 
+            # 自动更新 Nginx 配置
+            echo "步骤 4/8: 自动更新 Nginx 配置..."
+            cd /opt/mcp-services/ai-mcp-study
+
+            # 检查是否需要更新 nginx 配置
+            if [ -f fix-nginx-mcp.sh ]; then
+              echo "运行 nginx 配置更新脚本..."
+              chmod +x fix-nginx-mcp.sh
+              bash fix-nginx-mcp.sh || echo "⚠️  Nginx 配置更新失败，但继续部署"
+            else
+              echo "⚠️  未找到 fix-nginx-mcp.sh，跳过 nginx 配置更新"
+            fi
+
             # 验证 Nginx 配置
-            echo "步骤 4/7: 验证 Nginx 配置..."
-            echo "使用 /www/server/nginx/conf/nginx.conf 中已有的 MCP location 块"
+            echo "步骤 5/8: 验证 Nginx 配置..."
             sudo nginx -t
             echo "✓ Nginx 配置验证通过"
 
+            # 重载 Nginx
+            echo "重载 Nginx 服务..."
+            sudo systemctl reload nginx
+            echo "✓ Nginx 已重载"
+
             # 跳过环境变量配置（各包自己管理）
-            echo "步骤 5/7: 跳过环境变量配置（各包自行管理）..."
+            echo "步骤 6/8: 跳过环境变量配置（各包自行管理）..."
             echo "✓ 如果包需要配置，请在包目录下创建 .env 文件"
 
             # 停止所有容器
-            echo "步骤 6/7: 停止旧容器..."
+            echo "步骤 7/8: 停止旧容器..."
+            cd mcp-list
             docker-compose down || true
             echo "✓ 容器已停止"
 
             # 重建并启动所有服务（带容错）
-            echo "步骤 7/7: 重建并启动所有服务..."
+            echo "步骤 8/8: 重建并启动所有服务..."
 
             # 获取所有服务名称
             services=$(docker-compose config --services 2>/dev/null || echo "")

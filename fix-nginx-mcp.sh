@@ -1,7 +1,11 @@
 #!/bin/bash
-# 修复 MCP EventAnalyzer 的 Nginx 配置
+# 自动更新 MCP EventAnalyzer 的 Nginx 配置
 # 使 GET /mcp/eventanalyzer 路由到 /sse
 # 使 POST /mcp/eventanalyzer 路由到 /messages
+#
+# 特性：
+# - 幂等性：可以多次运行，不会重复添加配置
+# - 容错性：遇到错误时自动回滚
 
 set -e
 
@@ -9,9 +13,15 @@ NGINX_CONF="/www/server/nginx/conf/nginx.conf"
 BACKUP_CONF="/www/server/nginx/conf/nginx.conf.backup.$(date +%Y%m%d_%H%M%S)"
 
 echo "========================================="
-echo "📝 修复 MCP EventAnalyzer Nginx 配置"
+echo "📝 自动更新 MCP EventAnalyzer Nginx 配置"
 echo "========================================="
 echo ""
+
+# 检查 nginx.conf 是否存在
+if [ ! -f "$NGINX_CONF" ]; then
+  echo "❌ 错误：未找到 $NGINX_CONF"
+  exit 1
+fi
 
 # 1. 备份
 echo "步骤 1/4: 备份现有配置..."
@@ -19,10 +29,15 @@ sudo cp "$NGINX_CONF" "$BACKUP_CONF"
 echo "✓ 备份完成: $BACKUP_CONF"
 echo ""
 
-# 2. 删除旧的 MCP location 块
-echo "步骤 2/4: 删除旧的 MCP location 块..."
-sudo sed -i.bak '/# MCP EventAnalyzer 服务/,/^    }/d' "$NGINX_CONF"
-echo "✓ 旧配置已删除"
+# 2. 删除旧的 MCP location 块（如果存在）
+echo "步骤 2/4: 检查并删除旧的 MCP location 块..."
+if grep -q "# MCP EventAnalyzer 服务" "$NGINX_CONF"; then
+  echo "找到旧配置，正在删除..."
+  sudo sed -i.bak '/# MCP EventAnalyzer 服务/,/^    }/d' "$NGINX_CONF"
+  echo "✓ 旧配置已删除"
+else
+  echo "✓ 未找到旧配置，跳过删除"
+fi
 echo ""
 
 # 3. 创建新的 MCP location 块（支持 GET 和 POST 到同一路径）
@@ -101,14 +116,11 @@ echo ""
 # 4. 测试配置
 echo "步骤 4/4: 测试 Nginx 配置..."
 echo "========================================="
-if sudo nginx -t; then
+if sudo nginx -t 2>&1; then
     echo ""
     echo "✅ Nginx 配置测试通过！"
     echo ""
-    echo "下一步："
-    echo "1. 重载 Nginx: sudo systemctl reload nginx"
-    echo "2. 重启容器: cd /opt/mcp-services/ai-mcp-study/mcp-list && docker-compose restart eventanalyzer"
-    echo "3. 测试连接: curl -v https://junfeng530.xyz/mcp/eventanalyzer"
+    echo "配置已成功更新，Nginx 将在部署流程中自动重载。"
 else
     echo ""
     echo "❌ Nginx 配置测试失败"
@@ -118,3 +130,8 @@ else
     echo "✓ 已恢复到备份版本"
     exit 1
 fi
+
+echo ""
+echo "========================================="
+echo "✅ Nginx 配置更新完成"
+echo "========================================="
