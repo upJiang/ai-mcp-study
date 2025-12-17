@@ -44,21 +44,39 @@ for service in $services; do
     url_path="/mcp/$service"
     container_name="mcp-$service"
 
-    # 生成 location 块
+    # 生成 location 块（支持 SSE）
     location_block="
     # $service
     location $url_path {
         rewrite ^$url_path(/.*)?\$ \$1 break;
         proxy_pass http://$container_name:8000;
 
+        # 基础代理头
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
 
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+        # SSE 支持（Server-Sent Events）
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Connection '';
+        proxy_http_version 1.1;
+        chunked_transfer_encoding on;
+
+        # 长连接超时（SSE 需要）
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # CORS 支持（如果需要跨域）
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS' always;
+        add_header Access-Control-Allow-Headers 'Content-Type, Authorization' always;
+
+        if (\$request_method = 'OPTIONS') {
+            return 204;
+        }
     }
 "
 
