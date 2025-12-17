@@ -304,9 +304,9 @@ async def main():
         # 创建 SSE transport
         sse = SseServerTransport("/messages")
 
-        # SSE endpoint - 需要直接访问 ASGI 的 receive 和 send
+        # SSE endpoint - 需要直接访问 ASGI 的 scope, receive 和 send
         async def handle_sse(scope, receive, send):
-            async with sse.connect_sse(receive, send) as streams:
+            async with sse.connect_sse(scope, receive, send) as streams:
                 await server.run(
                     streams[0],
                     streams[1],
