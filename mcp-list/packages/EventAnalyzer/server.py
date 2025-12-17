@@ -299,12 +299,12 @@ async def main():
         import uvicorn
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
-        from starlette.routing import Route, Mount
+        from starlette.routing import Route
 
         # 创建 SSE transport
         sse = SseServerTransport("/messages")
 
-        # SSE endpoint - 需要直接访问 ASGI 的 scope, receive 和 send
+        # SSE endpoint - ASGI 应用，直接处理 scope, receive, send
         async def handle_sse(scope, receive, send):
             async with sse.connect_sse(scope, receive, send) as streams:
                 await server.run(
@@ -316,7 +316,7 @@ async def main():
         # 创建 Starlette app
         app = Starlette(
             routes=[
-                Mount("/sse", app=handle_sse),  # 使用 Mount 以访问原始 ASGI 接口
+                Route("/sse", app=handle_sse),  # 使用 Route 的 app 参数支持原始 ASGI
                 Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
             ],
         )
