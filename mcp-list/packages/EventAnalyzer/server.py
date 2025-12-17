@@ -299,7 +299,7 @@ async def main():
         import uvicorn
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
-        from starlette.routing import Route
+        from starlette.routing import Route, Mount
 
         # 创建 SSE transport
         sse = SseServerTransport("/messages")
@@ -316,7 +316,7 @@ async def main():
         # 创建 Starlette app
         app = Starlette(
             routes=[
-                Route("/sse", app=handle_sse),  # 使用 Route 的 app 参数支持原始 ASGI
+                Mount("/sse", app=handle_sse),  # Mount 支持原始 ASGI 应用
                 Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
             ],
         )
