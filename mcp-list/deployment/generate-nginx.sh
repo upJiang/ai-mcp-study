@@ -48,6 +48,8 @@ for service in $services; do
     location_block="
     # $service
     location $url_path {
+        # 默认访问根路径时，代理到 /sse
+        rewrite ^$url_path\$ /sse break;
         rewrite ^$url_path(/.*)?\$ \$1 break;
         proxy_pass http://$container_name:8000;
 
