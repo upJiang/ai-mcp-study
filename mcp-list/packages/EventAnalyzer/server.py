@@ -320,9 +320,7 @@ async def main():
                         )
                 # POST 消息端点
                 elif path == "/messages" and method == "POST":
-                    request = Request(scope, receive, send)
-                    response = await sse.handle_post_message(request)
-                    await response(scope, receive, send)
+                    await sse.handle_post_message(scope, receive, send)
                 # 404
                 else:
                     await send({
