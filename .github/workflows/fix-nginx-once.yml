@@ -1,0 +1,138 @@
+name: Fix Nginx Configuration (Run Once)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-nginx:
+    name: Fix Nginx and Check Logs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fix Nginx Configuration
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          command_timeout: 10m
+          script: |
+            set -e
+
+            echo "========================================="
+            echo "🔧 修复 MCP EventAnalyzer 配置"
+            echo "========================================="
+            echo ""
+
+            # 步骤 1: 查看容器详细日志
+            echo "步骤 1/5: 查看容器日志..."
+            cd /opt/mcp-services/ai-mcp-study/mcp-list
+            docker-compose logs --tail=100 eventanalyzer
+            echo ""
+
+            # 步骤 2: 检查容器内部服务
+            echo "步骤 2/5: 测试容器内部服务..."
+            docker exec mcp-eventanalyzer curl -v http://localhost:8000/sse || echo "容器内部测试失败"
+            echo ""
+
+            # 步骤 3: 备份 Nginx 配置
+            echo "步骤 3/5: 备份现有 Nginx 配置..."
+            sudo cp /www/server/nginx/conf/nginx.conf /www/server/nginx/conf/nginx.conf.backup.$(date +%Y%m%d_%H%M%S)
+            echo "✓ 备份完成"
+            echo ""
+
+            # 步骤 4: 添加 MCP 路由到 Nginx
+            echo "步骤 4/5: 添加 MCP 路由..."
+
+            # 检查是否已存在 MCP 配置
+            if grep -q "location /mcp/eventanalyzer" /www/server/nginx/conf/nginx.conf; then
+                echo "⚠️  MCP 路由已存在，跳过添加"
+            else
+                # 创建临时配置片段
+                cat > /tmp/mcp-location.conf << 'EOF'
+
+    # MCP EventAnalyzer 服务
+    location /mcp/eventanalyzer {
+        # 默认访问根路径时，代理到 /sse
+        rewrite ^/mcp/eventanalyzer$ /sse break;
+        rewrite ^/mcp/eventanalyzer(/.*)?$ $1 break;
+        proxy_pass http://mcp-eventanalyzer:8000;
+
+        # 基础代理头
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE 支持
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Connection '';
+        proxy_http_version 1.1;
+        chunked_transfer_encoding on;
+
+        # 长连接超时
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # CORS 支持
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS' always;
+        add_header Access-Control-Allow-Headers 'Content-Type, Authorization' always;
+
+        if ($request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+EOF
+
+                # 找到主 server 块（server_name junfeng530.xyz）并在其中插入配置
+                # 在最后一个 location 块之后、server 块结束之前插入
+                sudo sed -i '/server_name junfeng530.xyz;/,/^[[:space:]]*}[[:space:]]*$/{
+                    /^[[:space:]]*}[[:space:]]*$/ {
+                        r /tmp/mcp-location.conf
+                    }
+                }' /www/server/nginx/conf/nginx.conf
+
+                echo "✓ MCP 路由已添加"
+            fi
+            echo ""
+
+            # 步骤 5: 测试并重载 Nginx
+            echo "步骤 5/5: 测试并重载 Nginx..."
+            if sudo nginx -t; then
+                sudo systemctl reload nginx
+                echo "✓ Nginx 重载成功"
+            else
+                echo "❌ Nginx 配置测试失败"
+                echo "恢复备份..."
+                sudo cp /www/server/nginx/conf/nginx.conf.backup.* /www/server/nginx/conf/nginx.conf 2>/dev/null || true
+                exit 1
+            fi
+            echo ""
+
+            # 验证访问
+            echo "========================================="
+            echo "✅ 配置完成，测试访问..."
+            echo "========================================="
+            sleep 2
+            curl -I https://junfeng530.xyz/mcp/eventanalyzer 2>&1 | head -10
+            echo ""
+            echo "========================================="
+            echo "🎉 修复完成！"
+            echo "========================================="
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ Nginx 配置已修复"
+          echo ""
+          echo "现在可以在 Cursor 中使用："
+          echo "URL: https://junfeng530.xyz/mcp/eventanalyzer"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ 修复失败，请查看日志"
