@@ -171,8 +171,8 @@ jobs:
               echo ""
               echo "🔨 处理服务: $service"
 
-              # 构建服务
-              if docker-compose build --no-cache "$service" 2>&1; then
+              # 构建服务（使用缓存加速）
+              if docker-compose build "$service" 2>&1; then
                 echo "✓ $service 构建成功"
 
                 # 启动服务

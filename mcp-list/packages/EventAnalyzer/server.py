@@ -298,28 +298,42 @@ async def main():
         # HTTP/SSE 模式（用于远程访问）
         import uvicorn
         from mcp.server.sse import SseServerTransport
-        from starlette.applications import Starlette
-        from starlette.routing import Route, Mount
+        from starlette.requests import Request
+        from starlette.responses import Response
 
         # 创建 SSE transport
         sse = SseServerTransport("/messages")
 
-        # SSE endpoint - ASGI 应用，直接处理 scope, receive, send
-        async def handle_sse(scope, receive, send):
-            async with sse.connect_sse(scope, receive, send) as streams:
-                await server.run(
-                    streams[0],
-                    streams[1],
-                    server.create_initialization_options()
-                )
+        # 纯 ASGI 应用，避免 Mount 的 307 重定向问题
+        async def app(scope, receive, send):
+            if scope["type"] == "http":
+                path = scope["path"]
+                method = scope["method"]
 
-        # 创建 Starlette app
-        app = Starlette(
-            routes=[
-                Mount("/sse", app=handle_sse),  # Mount 支持原始 ASGI 应用
-                Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
-            ],
-        )
+                # SSE 连接端点
+                if path == "/sse" and method == "GET":
+                    async with sse.connect_sse(scope, receive, send) as streams:
+                        await server.run(
+                            streams[0],
+                            streams[1],
+                            server.create_initialization_options()
+                        )
+                # POST 消息端点
+                elif path == "/messages" and method == "POST":
+                    request = Request(scope, receive, send)
+                    response = await sse.handle_post_message(request)
+                    await response(scope, receive, send)
+                # 404
+                else:
+                    await send({
+                        "type": "http.response.start",
+                        "status": 404,
+                        "headers": [[b"content-type", b"text/plain"]],
+                    })
+                    await send({
+                        "type": "http.response.body",
+                        "body": b"Not Found",
+                    })
 
         # 启动 HTTP 服务器
         port = int(os.getenv("MCP_PORT", "8000"))
