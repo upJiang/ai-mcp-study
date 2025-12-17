@@ -1,13 +1,18 @@
 name: Auto Publish MCP Packages
 
 on:
-  # PR 合并到 main 分支时触发
+  # PR 合并到 main 分支时触发（仅 TypeScript 包）
   push:
     branches:
       - main
     paths:
-      - 'mcp-list/packages/**'
+      - 'mcp-list/packages/**/package.json'
+      - 'mcp-list/packages/**/src/**/*.ts'
+      - 'mcp-list/packages/**/tsconfig.json'
       - 'mcp-list/scripts/**'
+    paths-ignore:
+      - 'mcp-list/packages/**/server.py'
+      - 'mcp-list/packages/**/requirements.txt'
 
   # 手动触发（用于测试或紧急发布）
   workflow_dispatch:

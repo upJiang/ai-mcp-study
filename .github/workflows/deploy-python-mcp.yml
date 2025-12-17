@@ -1,14 +1,17 @@
 name: Auto Deploy Python MCP Services
 
 on:
-  # 代码合并到 main 分支后触发
+  # 代码合并到 main 分支后触发（仅 Python 包）
   push:
     branches:
       - main
     paths:
-      - 'mcp-list/packages/**'
+      - 'mcp-list/packages/**/server.py'
+      - 'mcp-list/packages/**/requirements.txt'
+      - 'mcp-list/packages/**/src/**/*.py'
       - 'mcp-list/deployment/**'
       - '.github/workflows/deploy-python-mcp.yml'
+      - 'fix-nginx-mcp.sh'
 
   # 支持手动触发
   workflow_dispatch:
