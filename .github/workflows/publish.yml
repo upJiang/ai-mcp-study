@@ -10,9 +10,12 @@ on:
       - 'mcp-list/packages/**/src/**/*.ts'
       - 'mcp-list/packages/**/tsconfig.json'
       - 'mcp-list/scripts/**'
+      - '.github/workflows/publish.yml'
     paths-ignore:
       - 'mcp-list/packages/**/server.py'
       - 'mcp-list/packages/**/requirements.txt'
+      - '.github/workflows/deploy-python-mcp.yml'
+      - 'fix-nginx-mcp.sh'
 
   # 手动触发（用于测试或紧急发布）
   workflow_dispatch:
