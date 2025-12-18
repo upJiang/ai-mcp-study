@@ -10,6 +10,7 @@ services:
       - PYTHONUNBUFFERED=1
       - MCP_TRANSPORT=http
       - MCP_PORT=8000
+      - MCP_BASE_PATH=/mcp/eventanalyzer  # Nginx 代理路径前缀
     ports:
       - "8100:8000"  # 映射容器端口 8000 到宿主机端口 8100
     restart: unless-stopped

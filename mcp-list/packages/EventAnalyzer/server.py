@@ -298,40 +298,56 @@ async def main():
         # HTTP/SSE 模式（用于远程访问）
         import uvicorn
         from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Route
         from starlette.requests import Request
         from starlette.responses import Response
 
-        # 创建 SSE transport（使用相对路径，避免 nginx 代理时的路径问题）
-        sse = SseServerTransport("messages")
+        # 获取 base path（用于 Nginx 代理）
+        base_path = os.getenv("MCP_BASE_PATH", "")
+        endpoint_path = f"{base_path}/messages" if base_path else "/messages"
 
-        # 纯 ASGI 应用，避免 Mount 的 307 重定向问题
-        async def app(scope, receive, send):
-            if scope["type"] == "http":
-                path = scope["path"]
-                method = scope["method"]
+        # 创建 SSE transport
+        sse = SseServerTransport(endpoint_path)
 
-                # SSE 连接端点
-                if path == "/sse" and method == "GET":
-                    async with sse.connect_sse(scope, receive, send) as streams:
-                        await server.run(
-                            streams[0],
-                            streams[1],
-                            server.create_initialization_options()
-                        )
-                # POST 消息端点
-                elif path == "/messages" and method == "POST":
-                    await sse.handle_post_message(scope, receive, send)
-                # 404
-                else:
-                    await send({
-                        "type": "http.response.start",
-                        "status": 404,
-                        "headers": [[b"content-type", b"text/plain"]],
-                    })
-                    await send({
-                        "type": "http.response.body",
-                        "body": b"Not Found",
-                    })
+        async def handle_sse(request: Request) -> Response:
+            """处理 SSE 连接"""
+            async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send,
+            ) as streams:
+                await server.run(
+                    streams[0],
+                    streams[1],
+                    server.create_initialization_options()
+                )
+            return Response()
+
+        async def handle_messages(request: Request) -> Response:
+            """处理 POST 消息"""
+            await sse.handle_post_message(
+                request.scope,
+                request.receive,
+                request._send,
+            )
+            return Response()
+
+        async def handle_root(request: Request) -> Response:
+            """处理根路径"""
+            return Response(
+                content="EventAnalyzer MCP Server is running",
+                media_type="text/plain"
+            )
+
+        # 使用 Starlette 应用
+        app = Starlette(
+            routes=[
+                Route("/", handle_root, methods=["GET"]),
+                Route("/sse", handle_sse, methods=["GET"]),
+                Route("/messages", handle_messages, methods=["POST"]),
+            ]
+        )
 
         # 启动 HTTP 服务器
         port = int(os.getenv("MCP_PORT", "8000"))

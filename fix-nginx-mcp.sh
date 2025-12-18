@@ -45,17 +45,10 @@ echo "步骤 3/4: 添加新的 MCP location 块..."
 
 cat > /tmp/mcp-eventanalyzer-fixed.conf << 'EOF'
 
-    # MCP EventAnalyzer 服务 ✨ 修复版
-    location /mcp/eventanalyzer {
-        # GET 请求路由到 /sse (SSE 连接)
-        # POST 请求路由到 /messages (发送消息)
-        set $target_path "/sse";
-        if ($request_method = POST) {
-            set $target_path "/messages";
-        }
-
-        rewrite ^ $target_path break;
-        proxy_pass http://127.0.0.1:8100;
+    # MCP EventAnalyzer 服务 ✨ 修复版 v2
+    # SSE 端点 - 处理 GET 请求
+    location /mcp/eventanalyzer/sse {
+        proxy_pass http://127.0.0.1:8100/sse;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -76,7 +69,34 @@ cat > /tmp/mcp-eventanalyzer-fixed.conf << 'EOF'
 
         # CORS 配置
         add_header Access-Control-Allow-Origin * always;
-        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS' always;
+        add_header Access-Control-Allow-Methods 'GET, OPTIONS' always;
+        add_header Access-Control-Allow-Headers 'Content-Type, Authorization' always;
+
+        if ($request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+
+    # Messages 端点 - 处理 POST 请求（保留查询参数）
+    location /mcp/eventanalyzer/messages {
+        proxy_pass http://127.0.0.1:8100/messages;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # HTTP 1.1 支持
+        proxy_http_version 1.1;
+
+        # 超时配置
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # CORS 配置
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods 'POST, OPTIONS' always;
         add_header Access-Control-Allow-Headers 'Content-Type, Authorization' always;
 
         if ($request_method = 'OPTIONS') {
