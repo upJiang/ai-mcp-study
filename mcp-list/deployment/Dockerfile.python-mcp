@@ -17,9 +17,9 @@ COPY requirements.txt .
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 构建时间参数（用于破坏 COPY 层缓存，确保代码更新）
-ARG BUILD_TIME
-ENV BUILD_TIME=${BUILD_TIME}
+# 缓存破坏参数（强制重新复制代码）
+ARG CACHEBUST=1
+RUN echo "Cache bust: $CACHEBUST"
 
 # 复制所有源码
 COPY . .

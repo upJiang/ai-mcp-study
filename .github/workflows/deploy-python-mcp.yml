@@ -146,13 +146,18 @@ jobs:
             echo "✓ 如果包需要配置，请在包目录下创建 .env 文件"
 
             # 停止所有容器
-            echo "步骤 7/8: 停止旧容器..."
+            echo "步骤 7/9: 停止旧容器..."
             cd mcp-list
             docker-compose down || true
             echo "✓ 容器已停止"
 
+            # 删除旧镜像，强制重建
+            echo "步骤 8/9: 删除旧镜像..."
+            docker images | grep "mcp-list-" | awk '{print $3}' | xargs -r docker rmi -f || true
+            echo "✓ 旧镜像已清理"
+
             # 重建并启动所有服务（带容错）
-            echo "步骤 8/8: 重建并启动所有服务..."
+            echo "步骤 9/9: 重建并启动所有服务..."
 
             # 获取所有服务名称
             services=$(docker-compose config --services 2>/dev/null || echo "")
@@ -172,7 +177,7 @@ jobs:
               echo "🔨 处理服务: $service"
 
               # 构建服务（使用缓存，但传入时间戳破坏 COPY 层缓存）
-              if docker-compose build --build-arg BUILD_TIME=$(date +%s) "$service" 2>&1; then
+              if docker-compose build --build-arg CACHEBUST=$(date +%s) "$service" 2>&1; then
                 echo "✓ $service 构建成功"
 
                 # 启动服务
