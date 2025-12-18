@@ -78,11 +78,23 @@ jobs:
               echo "  重试后远程 main: $(git log --oneline origin/main -1)"
             fi
 
+            echo "强制清理本地修改..."
+            git checkout . 2>/dev/null || true
+            git clean -fdx
+
             echo "重置到远程 main 分支..."
             git reset --hard origin/main
 
-            echo "清理未跟踪文件..."
-            git clean -fd
+            echo "验证代码版本..."
+            CURRENT_COMMIT=$(git log --oneline -1 --format="%H")
+            EXPECTED_COMMIT=$(git log --oneline origin/main -1 --format="%H")
+
+            if [ "$CURRENT_COMMIT" != "$EXPECTED_COMMIT" ]; then
+              echo "❌ 错误：代码版本不匹配！"
+              echo "  当前: $CURRENT_COMMIT"
+              echo "  期望: $EXPECTED_COMMIT"
+              exit 1
+            fi
 
             echo "✓ 当前版本: $(git log --oneline -1)"
 
