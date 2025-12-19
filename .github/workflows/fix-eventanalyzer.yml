@@ -9,6 +9,7 @@ on:
       - 'mcp-list/packages/EventAnalyzer/**'
       - 'mcp-list/docker-compose.yml'
       - 'fix-nginx-mcp.sh'
+      - 'diagnose-eventanalyzer.sh'
       - '.github/workflows/fix-eventanalyzer.yml'
 
   # 支持手动触发
