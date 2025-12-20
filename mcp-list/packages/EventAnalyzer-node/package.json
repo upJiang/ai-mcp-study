@@ -1,0 +1,46 @@
+{
+  "name": "@upjiang/eventanalyzer-mcp",
+  "version": "1.0.0",
+  "description": "MCP 服务：埋点事件分析工具 (Node.js 版本)",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "eventanalyzer-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "fastmcp": "^3.25.3",
+    "zod": "^4.1.13",
+    "node-cache": "^5.1.2",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "eventanalyzer",
+    "tracking",
+    "埋点",
+    "model-context-protocol"
+  ],
+  "author": "upjiang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/upjiang/ai-mcp-study.git",
+    "directory": "mcp-list/packages/EventAnalyzer-node"
+  }
+}

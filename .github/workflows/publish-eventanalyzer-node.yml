@@ -1,0 +1,98 @@
+name: Publish EventAnalyzer Node to npm
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mcp-list/packages/EventAnalyzer-node/**'
+      - '.github/workflows/publish-eventanalyzer-node.yml'
+
+  # 支持手动触发
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: 发布到 npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 安装依赖
+        run: |
+          cd mcp-list/packages/EventAnalyzer-node
+          npm install
+
+      - name: 编译 TypeScript
+        run: |
+          cd mcp-list/packages/EventAnalyzer-node
+          npm run build
+
+      - name: 检查编译结果
+        run: |
+          cd mcp-list/packages/EventAnalyzer-node
+          if [ ! -d "dist" ]; then
+            echo "❌ 编译失败：dist 目录不存在"
+            exit 1
+          fi
+          if [ ! -f "dist/index.js" ]; then
+            echo "❌ 编译失败：dist/index.js 不存在"
+            exit 1
+          fi
+          echo "✅ 编译成功"
+          ls -la dist/
+
+      - name: 发布到 npm
+        run: |
+          cd mcp-list/packages/EventAnalyzer-node
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 发布成功通知
+        if: success()
+        run: |
+          echo "========================================="
+          echo "✅ EventAnalyzer Node.js 版本发布成功！"
+          echo "========================================="
+          echo ""
+          echo "📦 包名: @upjiang/eventanalyzer-mcp"
+          echo "🔗 npm: https://www.npmjs.com/package/@upjiang/eventanalyzer-mcp"
+          echo ""
+          echo "使用方式："
+          echo "npx -y @upjiang/eventanalyzer-mcp"
+          echo ""
+          echo "Cursor 配置："
+          echo '{'
+          echo '  "mcpServers": {'
+          echo '    "EventAnalyzer-Node": {'
+          echo '      "command": "npx",'
+          echo '      "args": ["-y", "@upjiang/eventanalyzer-mcp"]'
+          echo '    }'
+          echo '  }'
+          echo '}'
+          echo "========================================="
+
+      - name: 发布失败通知
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "❌ EventAnalyzer Node.js 版本发布失败"
+          echo "========================================="
+          echo ""
+          echo "请检查："
+          echo "1. NPM_TOKEN secret 是否正确配置"
+          echo "2. package.json 中的版本号是否已更新"
+          echo "3. 编译是否成功"
+          echo "4. npm 账号权限是否正确"
+          echo ""
+          echo "查看上方的错误日志获取详细信息"
+          echo "========================================="

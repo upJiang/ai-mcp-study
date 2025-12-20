@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mermaid 图表 11</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        fontSize: '20px',
+        fontFamily: 'Arial, sans-serif'
+      },
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: false,
+        diagramMarginX: 50,
+        diagramMarginY: 10,
+        actorMargin: 50,
+        width: 150,
+        height: 65,
+        boxMargin: 10,
+        boxTextMargin: 5,
+        noteMargin: 10,
+        messageMargin: 35
+      }
+    });
+  </script>
+  <style>
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+      margin: 0;
+      padding: 60px;
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .mermaid {
+      background: white;
+      transform: scale(1);
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    participant AI as AI
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant API as 外部API
+
+    U->>AI: 今天使用率最高的是谁？
+    AI->>AI: 分析意图
+    AI->>Client: 决定调用 query_top_users
+    Client->>Server: tools/call<br/>{name: "query_top_users"}
+    Server->>API: 调用 API 获取数据
+    API->>Server: 返回数据
+    Server->>Server: 处理数据
+    Server->>Client: 返回 JSON 结果
+    Client->>AI: 传递结果
+    AI->>U: 今天使用率最高的是张三<br/>费用 $12.50，请求数 350 次
+  </div>
+</body>
+</html>

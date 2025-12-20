@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mermaid 图表 2</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        fontSize: '20px',
+        fontFamily: 'Arial, sans-serif'
+      },
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: false,
+        diagramMarginX: 50,
+        diagramMarginY: 10,
+        actorMargin: 50,
+        width: 150,
+        height: 65,
+        boxMargin: 10,
+        boxTextMargin: 5,
+        noteMargin: 10,
+        messageMargin: 35
+      }
+    });
+  </script>
+  <style>
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+      margin: 0;
+      padding: 60px;
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .mermaid {
+      background: white;
+      transform: scale(1);
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="mermaid">
+graph TB
+    subgraph AI应用层
+        A1[Claude]
+        A2[ChatGPT]
+        A3[Gemini]
+    end
+
+    subgraph MCP协议层
+        MCP[MCP 协议层]
+    end
+
+    subgraph 工具层
+        T1[GitHub MCP]
+        T2[Database MCP]
+        T3[Slack MCP]
+    end
+
+    A1 --> MCP
+    A2 --> MCP
+    A3 --> MCP
+    MCP --> T1
+    MCP --> T2
+    MCP --> T3
+
+    style MCP fill:#ff6,stroke:#333,stroke-width:3px
+    style A1 fill:#f9f,stroke:#333
+    style A2 fill:#f9f,stroke:#333
+    style A3 fill:#f9f,stroke:#333
+    style T1 fill:#9cf,stroke:#333
+    style T2 fill:#9cf,stroke:#333
+    style T3 fill:#9cf,stroke:#333
+  </div>
+</body>
+</html>

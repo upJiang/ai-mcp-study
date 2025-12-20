@@ -3,6 +3,7 @@
 """
 
 import json
+import os
 import requests
 from typing import Dict, Any, Optional
 from functools import lru_cache
@@ -11,7 +12,10 @@ from functools import lru_cache
 class EventAPIClient:
     """埋点事件 API 客户端"""
 
-    BASE_URL = "https://tptest-3d66.top/trans/api/event"
+    BASE_URL = os.getenv(
+        "EVENT_API_BASE_URL",
+        "https://tptest-3d66.top/trans/api/event"
+    )
 
     def __init__(self, timeout: int = 10):
         """

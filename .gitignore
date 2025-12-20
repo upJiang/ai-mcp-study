@@ -1,2 +1,7 @@
 keys.json
 node-mcp-demo/node_modules
+node_modules
+
+# EventAnalyzer-node 编译产物
+mcp-list/packages/EventAnalyzer-node/dist/
+mcp-list/packages/EventAnalyzer-node/package-lock.json
