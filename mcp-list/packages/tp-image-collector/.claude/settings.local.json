@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(move \"e:\\mcp\\wfw-tool-1-map\\CHANGELOG.md\" \"e:\\mcp\\wfw-tool-1-map\\更新日志.md\")",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

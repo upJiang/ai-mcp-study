@@ -1,7 +1,6 @@
 # tp-image-collector
 
 基于 MCP (Model Context Protocol) 的网页图片采集工具。
-测试一下。
 
 ## 功能特点
 
