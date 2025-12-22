@@ -1,6 +1,6 @@
 {
   "name": "@upjiang/eventanalyzer-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP 服务：埋点事件分析工具 (Node.js 版本)",
   "type": "module",
   "main": "dist/index.js",
