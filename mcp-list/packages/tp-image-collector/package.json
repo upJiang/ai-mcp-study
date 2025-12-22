@@ -1,6 +1,6 @@
 {
   "name": "tp-image-collector",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "MCP 图片采集工具 - 采集网页上的图片并保存到桌面",
   "main": "build/index.js",
   "bin": {

@@ -1,9 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
-import { exec } from "child_process";
 import { chromium, Browser, Page } from "playwright";
 import { createRequire } from "module";
-import { getDesktopPath, extractDomain, getTimestamp, getImageExtension, extractFileName } from "./utils.js";
+import { getDesktopPath, extractDomain, getTimestamp, getImageExtension, extractFileName, openFolder } from "./utils.js";
 import { downloadImage } from "./download.js";
 import {
   getOverlayInitScript,
@@ -383,7 +382,7 @@ export async function collectImages(targetUrl: string): Promise<CollectResult> {
     // 不自动关闭浏览器，让用户查看明细后手动关闭
 
     // 自动打开保存的文件夹
-    exec(`explorer "${savePath}"`);
+    openFolder(savePath);
 
     return {
       success: true,

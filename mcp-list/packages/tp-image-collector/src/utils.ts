@@ -1,6 +1,7 @@
 import * as path from "path";
 import os from "os";
 import { URL } from "url";
+import { exec } from "child_process";
 
 /**
  * 获取桌面路径
@@ -73,4 +74,30 @@ export function extractFileName(url: string): string {
   } catch {
     return "";
   }
+}
+
+/**
+ * 跨平台打开文件夹
+ */
+export function openFolder(folderPath: string): void {
+  const platform = process.platform;
+  let command: string;
+
+  switch (platform) {
+    case "win32":
+      command = `explorer "${folderPath}"`;
+      break;
+    case "darwin":
+      command = `open "${folderPath}"`;
+      break;
+    default:
+      // Linux
+      command = `xdg-open "${folderPath}"`;
+  }
+
+  exec(command, (error) => {
+    if (error) {
+      console.error(`打开文件夹失败: ${error.message}`);
+    }
+  });
 }
